@@ -4,6 +4,7 @@ import dev.raul.totvs.taskmanager.controller.dto.request.CreateUserRequest;
 import dev.raul.totvs.taskmanager.controller.dto.response.UserResponse;
 import dev.raul.totvs.taskmanager.entity.UserEntity;
 import dev.raul.totvs.taskmanager.exception.EmailAlreadyExistsException;
+import dev.raul.totvs.taskmanager.exception.ResourceNotFoundException;
 import dev.raul.totvs.taskmanager.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -69,4 +71,42 @@ class UserServiceTest {
         verify(userRepository).existsByEmail(request.email());
         verify(userRepository, never()).save(any(UserEntity.class));
     }
+
+    @Test
+    @DisplayName("Should return a user when ID exists")
+    void shouldReturnUserWhenIdExists(){
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UserEntity existingEntity = UserEntity.builder()
+                .id(userId)
+                .name("Raul")
+                .email("raul@email.com")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingEntity));
+        // Act
+        UserResponse response = userService.getUserById(userId);
+
+        //Assert
+        assertNotNull(response);
+        assertEquals(userId, response.id());
+        assertEquals("Raul", response.name());
+        assertEquals("raul@email.com", response.email());
+        verify(userRepository).findById(userId);
+    }
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when user does not exist")
+    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist(){
+        UUID userId = UUID.randomUUID();
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            userService.getUserById(userId);
+        });
+
+        assertEquals("User not found", exception.getMessage());
+        verify(userRepository).findById(userId);
+    }
+
 }
