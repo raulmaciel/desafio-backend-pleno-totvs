@@ -45,9 +45,9 @@ O sistema foi modelado utilizando banco relacional (PostgreSQL), pois as entidad
 ## 5. Regras de Negócio
 
 ###  Usuário
-- `id`: UUID gerado automaticamente
-- `nome`: obrigatório
-- `email`: obrigatório, único e válido
+- `id`: UUID PK gerado automaticamente
+- `nome`: String obrigatório 
+- `email`: String obrigatório, único e válido
 
 **Endpoints:**
 - `POST /usuarios` → cria usuário
@@ -56,13 +56,13 @@ O sistema foi modelado utilizando banco relacional (PostgreSQL), pois as entidad
 ---
 
 ###  Tarefa
-- `id`: UUID gerado automaticamente
-- `titulo`: obrigatório
-- `descricao`: opcional
-- `status`: `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`
-- `dataCriacao`: gerada automaticamente
-- `dataConclusao`: apenas se `CONCLUIDA`
-- `usuarioId`: referência ao usuário
+- `id`: UUID PK gerado automaticamente 
+- `titulo`: String obrigatório
+- `descricao`: String opcional
+- `status`: ENUM `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`
+- `dataCriacao`: LocalDateTime gerada automaticamente
+- `dataConclusao`: LocalDateTime - prrenchida apenas se `CONCLUIDA`
+- `usuarioId`: UUID referência ao usuário @mANYtoOne pra usuario
 
 **Regras:**
 - `dataConclusao` só é preenchida quando o status for `CONCLUIDA`
@@ -76,13 +76,13 @@ O sistema foi modelado utilizando banco relacional (PostgreSQL), pois as entidad
 ---
 
 ###  Subtarefa
-- `id`: UUID gerado automaticamente
-- `titulo`: obrigatório
-- `descricao`: opcional
-- `status`: `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`
-- `dataCriacao`: gerada automaticamente
-- `dataConclusao`: apenas se `CONCLUIDA`
-- `tarefaId`: referência à tarefa
+- `id`: UUID PK gerado automaticamente
+- `titulo`: String obrigatório
+- `descricao`: String opcional
+- `status`: ENUM `PENDENTE`, `EM_ANDAMENTO`, `CONCLUIDA`
+- `dataCriacao`: LocalDateTime gerada automaticamente
+- `dataConclusao`: LocalDateTime preenchida apenas se `CONCLUIDA`
+- `tarefaId`: UUID referência à tarefa @ManyToONE pra tarefa
 
 **Regras:**
 - Concluir uma subtarefa **não conclui automaticamente a tarefa**
