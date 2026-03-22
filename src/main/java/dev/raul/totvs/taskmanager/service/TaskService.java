@@ -11,9 +11,10 @@ import dev.raul.totvs.taskmanager.exception.ResourceNotFoundException;
 import dev.raul.totvs.taskmanager.repository.SubtaskRepository;
 import dev.raul.totvs.taskmanager.repository.TaskRepository;
 import dev.raul.totvs.taskmanager.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -60,5 +61,11 @@ public class TaskService {
         TaskEntity updatedTask = taskRepository.save(task);
 
         return TaskResponse.fromEntity(updatedTask);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TaskResponse> listTasks(TaskStatus status, UUID userId, Pageable pageable) {
+        return taskRepository.findTasksWithFilters(status, userId, pageable)
+                .map(TaskResponse::fromEntity);
     }
 }

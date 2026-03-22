@@ -17,8 +17,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -187,6 +191,34 @@ class TaskServiceTest {
         assertEquals("Task not found", exception.getMessage());
         verify(taskRepository).findById(taskId);
         verify(taskRepository,never()).save(any(TaskEntity.class));
+    }
+
+    @Test
+    @DisplayName("Should list task with filters")
+    void shoulListTasksWithFilters(){
+        //arrange
+        UUID userId = UUID.randomUUID();
+        TaskStatus status = TaskStatus.PENDING;
+        PageRequest pageable = PageRequest.of(0, 10);
+
+        TaskEntity task = TaskEntity.builder()
+                .id(UUID.randomUUID())
+                .title("Tarefa 1")
+                .status(status)
+                .build();
+
+        PageImpl<TaskEntity> page = new PageImpl<>(List.of(task));
+        when(taskRepository.findTasksWithFilters(status, userId, pageable)).thenReturn(page);
+
+        //actf
+
+        Page<TaskResponse> response = taskService.listTasks(status, userId, pageable);
+
+        //assert
+        assertNotNull(response);
+        assertEquals(1, response.getTotalElements());
+        assertEquals("Tarefa 1", response.getContent().get(0).title());
+        verify(taskRepository).findTasksWithFilters(status, userId, pageable);
     }
 
 

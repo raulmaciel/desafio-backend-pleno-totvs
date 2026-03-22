@@ -6,10 +6,9 @@ import dev.raul.totvs.taskmanager.entity.UserEntity;
 import dev.raul.totvs.taskmanager.exception.EmailAlreadyExistsException;
 import dev.raul.totvs.taskmanager.exception.ResourceNotFoundException;
 import dev.raul.totvs.taskmanager.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
