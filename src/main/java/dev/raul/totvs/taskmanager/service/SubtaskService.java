@@ -9,9 +9,9 @@ import dev.raul.totvs.taskmanager.enums.TaskStatus;
 import dev.raul.totvs.taskmanager.exception.ResourceNotFoundException;
 import dev.raul.totvs.taskmanager.repository.SubtaskRepository;
 import dev.raul.totvs.taskmanager.repository.TaskRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +38,7 @@ public class SubtaskService {
 
     @Transactional
     public SubtaskResponse updateSubtaskStatus(UUID id, UpdateSubtaskRequest request) {
-        SubtaskEntity subtask = subtaskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        SubtaskEntity subtask = subtaskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Subtask not found"));
         TaskStatus requestStatus = request.status();
 
         if (requestStatus == TaskStatus.COMPLETED){
@@ -51,5 +51,12 @@ public class SubtaskService {
         SubtaskEntity updatedSubtask = subtaskRepository.save(subtask);
 
         return SubtaskResponse.fromEntity(updatedSubtask);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SubtaskResponse> listSubtasksByTask(UUID taskId, Pageable pageable) {
+        TaskEntity task = taskRepository.findById(taskId).orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        return subtaskRepository.findByTask_Id(taskId, pageable).map(SubtaskResponse::fromEntity);
     }
 }
