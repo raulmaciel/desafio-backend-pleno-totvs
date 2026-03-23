@@ -1,0 +1,36 @@
+package com.totvs.taskmanager.service;
+
+import com.totvs.taskmanager.controller.dto.request.CreateUserRequest;
+import com.totvs.taskmanager.controller.dto.response.UserResponse;
+import com.totvs.taskmanager.entity.UserEntity;
+import com.totvs.taskmanager.exception.EmailAlreadyExistsException;
+import com.totvs.taskmanager.exception.ResourceNotFoundException;
+import com.totvs.taskmanager.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+    private final UserRepository userRepository;
+
+    @Transactional
+    public UserResponse createUser(CreateUserRequest request){
+        if (userRepository.existsByEmail(request.email())){
+            throw new EmailAlreadyExistsException("Email already exists");
+        }
+
+        UserEntity userEntity = request.toEntity();
+        UserEntity savedUser = userRepository.save(userEntity);
+
+        return UserResponse.fromEntity(savedUser);
+    }
+
+    public UserResponse getUserById(UUID id) {
+        UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return UserResponse.fromEntity(userEntity);
+    }
+}
