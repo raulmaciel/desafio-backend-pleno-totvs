@@ -1,0 +1,90 @@
+package dev.raul.totvs.taskmanager.service;
+
+import dev.raul.totvs.taskmanager.controller.dto.request.CreateSubTaskRequest;
+import dev.raul.totvs.taskmanager.controller.dto.response.SubtaskResponse;
+import dev.raul.totvs.taskmanager.entity.SubtaskEntity;
+import dev.raul.totvs.taskmanager.entity.TaskEntity;
+import dev.raul.totvs.taskmanager.enums.TaskStatus;
+import dev.raul.totvs.taskmanager.exception.ResourceNotFoundException;
+import dev.raul.totvs.taskmanager.repository.SubtaskRepository;
+import dev.raul.totvs.taskmanager.repository.TaskRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SubtaskServiceTest {
+    @Mock
+    private SubtaskRepository subtaskRepository;
+
+    @Mock
+    private TaskRepository taskRepository;
+
+    @InjectMocks
+    private SubtaskService subtaskService;
+
+    @Test
+    @DisplayName("Should create subtask successfully")
+    void shouldCreateSubtaskSuccessfully(){
+        //arrange
+        UUID taskId = UUID.randomUUID();
+        CreateSubTaskRequest request = new CreateSubTaskRequest("Fazer rascunho", "Páginas de 1 a 5");
+
+        TaskEntity task = TaskEntity.builder()
+                .id(taskId)
+                .title("Estudar livro")
+                .build();
+        SubtaskEntity mockedSavedSubtask = SubtaskEntity.builder()
+                .id(UUID.randomUUID())
+                .title("Fazer rascunho")
+                .status(TaskStatus.PENDING)
+                .task(task)
+                .build();
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(task));
+        when(subtaskRepository.save(any(SubtaskEntity.class))).thenReturn(mockedSavedSubtask);
+
+        //act
+
+        SubtaskResponse response = subtaskService.createSubtask(taskId, request);
+
+        //Assert
+
+        assertNotNull(response);
+        assertEquals("Fazer rascunho", response.title());
+        assertEquals(TaskStatus.PENDING, response.status());
+        assertEquals(taskId, response.taskId());
+
+        verify(taskRepository).findById(taskId);
+        verify(subtaskRepository).save(any(SubtaskEntity.class));
+    }
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when task does not exist")
+    void shouldThrowResourceNotFoundExceptionWhenTaskDoesntExists(){
+        UUID taskId = UUID.randomUUID();
+        CreateSubTaskRequest request = new CreateSubTaskRequest("Rascunho", "");
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            subtaskService.createSubtask(taskId, request);
+        });
+
+        assertEquals("Task not found", exception.getMessage());
+        verify(taskRepository).findById(taskId);
+        verify(subtaskRepository, never()).save(any());
+    }
+
+}
