@@ -2,7 +2,6 @@ package dev.raul.totvs.taskmanager.service;
 
 import dev.raul.totvs.taskmanager.controller.dto.request.CreateSubTaskRequest;
 import dev.raul.totvs.taskmanager.controller.dto.request.UpdateSubtaskRequest;
-import dev.raul.totvs.taskmanager.controller.dto.request.UpdateTaskStatusRequest;
 import dev.raul.totvs.taskmanager.controller.dto.response.SubtaskResponse;
 import dev.raul.totvs.taskmanager.entity.SubtaskEntity;
 import dev.raul.totvs.taskmanager.entity.TaskEntity;
@@ -16,8 +15,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -142,5 +146,59 @@ class SubtaskServiceTest {
         assertNull(response.concludedAt());
         verify(subtaskRepository).save(subtask);
     }
+
+
+    @Test
+    @DisplayName("Should return paginated subtasks successfully")
+    void shouldReturnPaginatedSubtasksSuccessfully() {
+        UUID taskId = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 5);
+
+        TaskEntity task = TaskEntity.builder()
+                .id(taskId)
+                .build();
+
+        SubtaskEntity subtask = SubtaskEntity.builder()
+                .id(UUID.randomUUID())
+                .title("Subtask 1")
+                .task(task)
+                .build();
+
+        Page<SubtaskEntity> subtaskPage = new PageImpl<>(List.of(subtask));
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(task));
+        when(subtaskRepository.findByTask_Id(taskId, pageable)).thenReturn(subtaskPage);
+
+        //act
+        Page<SubtaskResponse> response = subtaskService.listSubtasksByTask(taskId, pageable);
+
+        // assert
+        assertNotNull(response);
+        assertEquals(1, response.getContent().size());
+        verify(taskRepository).findById(taskId);
+        verify(subtaskRepository).findByTask_Id(taskId, pageable);
+    }
+
+    @Test
+    @DisplayName("Should throw ResourceNotFoundException when task does not exist")
+    void shouldThrowExceptionWhenTaskDoesNotExist() {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 5);
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            subtaskService.listSubtasksByTask(taskId, pageable);
+        });
+
+        assertEquals("Task not found", exception.getMessage());
+
+        verify(taskRepository).findById(taskId);
+        verify(subtaskRepository, never()).findByTask_Id(any(), any());
+
+    }
+
 
 }
