@@ -1,6 +1,8 @@
 package dev.raul.totvs.taskmanager.service;
 
 import dev.raul.totvs.taskmanager.controller.dto.request.CreateSubTaskRequest;
+import dev.raul.totvs.taskmanager.controller.dto.request.UpdateSubtaskRequest;
+import dev.raul.totvs.taskmanager.controller.dto.request.UpdateTaskStatusRequest;
 import dev.raul.totvs.taskmanager.controller.dto.response.SubtaskResponse;
 import dev.raul.totvs.taskmanager.entity.SubtaskEntity;
 import dev.raul.totvs.taskmanager.entity.TaskEntity;
@@ -15,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -85,6 +88,59 @@ class SubtaskServiceTest {
         assertEquals("Task not found", exception.getMessage());
         verify(taskRepository).findById(taskId);
         verify(subtaskRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should update status and fill concludeAt from subtask without change task status")
+    void shouldUpdateSubtaskStatusSucessfully(){
+        // Arrange
+        UUID subtaskId = UUID.randomUUID();
+        TaskEntity task = TaskEntity.builder()
+                .id(UUID.randomUUID())
+                .status(TaskStatus.PENDING)
+                .build();
+
+        SubtaskEntity subtask = SubtaskEntity.builder().id(subtaskId).status(TaskStatus.IN_PROGRESS).task(task).build();
+        UpdateSubtaskRequest request = new UpdateSubtaskRequest(TaskStatus.COMPLETED);
+
+        when(subtaskRepository.findById(subtaskId)).thenReturn(Optional.of(subtask));
+        when(subtaskRepository.save(any(SubtaskEntity.class))).thenReturn(subtask);
+        // Act
+
+        SubtaskResponse response = subtaskService.updateSubtaskStatus(subtaskId, request);
+        //Assure
+
+        assertEquals(TaskStatus.COMPLETED, response.status());
+        assertNotNull(response.concludedAt());
+        assertEquals(TaskStatus.PENDING, task.getStatus());
+
+        verify(subtaskRepository).save(subtask);
+        verify(taskRepository, never()).save(any());
+
+    }
+
+    @Test
+    @DisplayName("Should clear concludedAt field when subtask reopen")
+    void shouldClearConcludedAtWhenReopenSubtask(){
+
+        UUID subtaskId = UUID.randomUUID();
+        SubtaskEntity subtask = SubtaskEntity.builder()
+                .id(subtaskId)
+                .status(TaskStatus.COMPLETED)
+                .concludedAt(LocalDateTime.now())
+                .build();
+
+        UpdateSubtaskRequest request = new UpdateSubtaskRequest(TaskStatus.PENDING);
+
+        when(subtaskRepository.findById(subtaskId)).thenReturn(Optional.of(subtask));
+        when(subtaskRepository.save(any(SubtaskEntity.class))).thenReturn(subtask);
+
+
+        SubtaskResponse response = subtaskService.updateSubtaskStatus(subtaskId, request);
+
+        assertEquals(TaskStatus.PENDING, response.status());
+        assertNull(response.concludedAt());
+        verify(subtaskRepository).save(subtask);
     }
 
 }
