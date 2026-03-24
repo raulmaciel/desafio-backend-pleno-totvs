@@ -3,6 +3,7 @@ package com.totvs.taskmanager.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.totvs.taskmanager.controller.dto.request.CreateSubTaskRequest;
 import com.totvs.taskmanager.controller.dto.request.CreateTaskRequest;
+import com.totvs.taskmanager.controller.dto.request.UpdateSubtaskRequest;
 import com.totvs.taskmanager.controller.dto.response.SubtaskResponse;
 import com.totvs.taskmanager.controller.dto.response.TaskResponse;
 import com.totvs.taskmanager.enums.TaskStatus;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -70,7 +72,7 @@ class SubtaskControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenSubtaskTitleIsBlank() throws Exception{
+    void shouldReturn400WhenSubtaskTitleIsBlank() throws Exception {
         UUID taskId = UUID.randomUUID();
 
         CreateSubTaskRequest request = new CreateSubTaskRequest(
@@ -88,7 +90,7 @@ class SubtaskControllerTest {
     }
 
     @Test
-    void shouldReturn404WhenTaskDoesNotExist() throws Exception{
+    void shouldReturn404WhenTaskDoesNotExist() throws Exception {
         UUID taskId = UUID.randomUUID();
 
         CreateSubTaskRequest request = new CreateSubTaskRequest(
@@ -105,5 +107,67 @@ class SubtaskControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(subtaskService).createSubtask(eq(taskId), any(CreateSubTaskRequest.class));
+    }
+
+    @Test
+    void shouldReturn200WhenSubtaskStatusIsUpdated() throws Exception {
+        UUID subtaskId = UUID.randomUUID();
+
+        UpdateSubtaskRequest request = new UpdateSubtaskRequest(
+                TaskStatus.COMPLETED
+        );
+
+        SubtaskResponse response = new SubtaskResponse(
+                subtaskId,
+                "Subtask 1",
+                "description",
+                TaskStatus.COMPLETED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                UUID.randomUUID()
+        );
+
+        when(subtaskService.updateSubtaskStatus(eq(subtaskId), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(patch("/subtarefas/{id}/status", subtaskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(subtaskService).updateSubtaskStatus(eq(subtaskId), any());
+    }
+
+    @Test
+    void shouldReturn400WhenStatusIsNull() throws Exception {
+        UUID subtaskId = UUID.randomUUID();
+
+        UpdateSubtaskRequest request = new UpdateSubtaskRequest(null);
+
+        mockMvc.perform(patch("/subtarefas/{id}/status", subtaskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(subtaskService, never()).updateSubtaskStatus(any(), any());
+    }
+
+    @Test
+    void shouldReturn404WhenSubtaskDoesNotExist() throws Exception {
+        UUID subtaskId = UUID.randomUUID();
+
+        UpdateSubtaskRequest request = new UpdateSubtaskRequest(
+                TaskStatus.COMPLETED
+        );
+
+        when(subtaskService.updateSubtaskStatus(eq(subtaskId), any()))
+                .thenThrow(new ResourceNotFoundException("Subtask not found"));
+
+        mockMvc.perform(patch("/subtarefas/{id}/status", subtaskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+
+        verify(subtaskService).updateSubtaskStatus(eq(subtaskId), any());
     }
 }
