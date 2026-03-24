@@ -24,14 +24,14 @@ public class SubtaskController {
     private final SubtaskService subtaskService;
 
     @PostMapping("/tarefas/{taskId}/subtarefas")
-    public ResponseEntity<SubtaskResponse> createSubtask(@PathVariable UUID taskId, @RequestBody @Valid CreateSubTaskRequest request){
+    public ResponseEntity<SubtaskResponse> createSubtask(@PathVariable UUID taskId, @RequestBody @Valid CreateSubTaskRequest request) {
         SubtaskResponse response = subtaskService.createSubtask(taskId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PatchMapping("/subtarefas/{id}/status")
-    public ResponseEntity<SubtaskResponse> updateSubtaskStatus(@PathVariable UUID id, @RequestBody @Valid UpdateSubtaskRequest request){
+    public ResponseEntity<SubtaskResponse> updateSubtaskStatus(@PathVariable UUID id, @RequestBody @Valid UpdateSubtaskRequest request) {
         SubtaskResponse response = subtaskService.updateSubtaskStatus(id, request);
         return ResponseEntity.ok(response);
     }
@@ -40,7 +40,7 @@ public class SubtaskController {
     public ResponseEntity<Page<SubtaskResponse>> listTasks(
             @PathVariable UUID taskId,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable
-    ){
+    ) {
         Page<SubtaskResponse> page = subtaskService.listSubtasksByTask(taskId, pageable);
         return ResponseEntity.ok(page);
     }

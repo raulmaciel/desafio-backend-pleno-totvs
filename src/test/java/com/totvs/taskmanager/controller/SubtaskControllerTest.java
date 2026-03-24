@@ -1,0 +1,109 @@
+package com.totvs.taskmanager.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.totvs.taskmanager.controller.dto.request.CreateSubTaskRequest;
+import com.totvs.taskmanager.controller.dto.request.CreateTaskRequest;
+import com.totvs.taskmanager.controller.dto.response.SubtaskResponse;
+import com.totvs.taskmanager.controller.dto.response.TaskResponse;
+import com.totvs.taskmanager.enums.TaskStatus;
+import com.totvs.taskmanager.exception.GlobalExceptionHandler;
+import com.totvs.taskmanager.exception.ResourceNotFoundException;
+import com.totvs.taskmanager.service.SubtaskService;
+import com.totvs.taskmanager.service.TaskService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+
+@WebMvcTest(controllers = SubtaskController.class)
+@Import(GlobalExceptionHandler.class)
+class SubtaskControllerTest {
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @MockitoBean
+    SubtaskService subtaskService;
+
+    @Test
+    void shouldReturn201WhenSubtaskIsCreated() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        CreateSubTaskRequest request = new CreateSubTaskRequest(
+                "Subtask 1",
+                "Subtask 1 description"
+        );
+
+        SubtaskResponse response = new SubtaskResponse(
+                UUID.randomUUID(),
+                "Subtask 1",
+                "Subtask description",
+                TaskStatus.PENDING,
+                LocalDateTime.now(),
+                null,
+                taskId
+        );
+
+        when(subtaskService.createSubtask(eq(taskId), any(CreateSubTaskRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/tarefas/{taskId}/subtarefas", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        verify(subtaskService).createSubtask(eq(taskId), any(CreateSubTaskRequest.class));
+    }
+
+    @Test
+    void shouldReturn400WhenSubtaskTitleIsBlank() throws Exception{
+        UUID taskId = UUID.randomUUID();
+
+        CreateSubTaskRequest request = new CreateSubTaskRequest(
+                "",
+                "Subtask 1 description"
+        );
+
+
+        mockMvc.perform(post("/tarefas/{taskId}/subtarefas", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(subtaskService, never()).createSubtask(any(), any());
+    }
+
+    @Test
+    void shouldReturn404WhenTaskDoesNotExist() throws Exception{
+        UUID taskId = UUID.randomUUID();
+
+        CreateSubTaskRequest request = new CreateSubTaskRequest(
+                "Subtask 1",
+                "Subtask 1 description"
+        );
+
+        when(subtaskService.createSubtask(eq(taskId), any(CreateSubTaskRequest.class)))
+                .thenThrow(new ResourceNotFoundException(("Task not found")));
+
+        mockMvc.perform(post("/tarefas/{taskId}/subtarefas", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+
+        verify(subtaskService).createSubtask(eq(taskId), any(CreateSubTaskRequest.class));
+    }
+}
