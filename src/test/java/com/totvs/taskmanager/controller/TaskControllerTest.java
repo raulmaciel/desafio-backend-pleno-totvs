@@ -2,15 +2,14 @@ package com.totvs.taskmanager.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.totvs.taskmanager.controller.dto.request.CreateTaskRequest;
-import com.totvs.taskmanager.controller.dto.request.CreateUserRequest;
+import com.totvs.taskmanager.controller.dto.request.UpdateTaskStatusRequest;
 import com.totvs.taskmanager.controller.dto.response.TaskResponse;
-import com.totvs.taskmanager.controller.dto.response.UserResponse;
 import com.totvs.taskmanager.enums.TaskStatus;
+import com.totvs.taskmanager.exception.BusinessRuleException;
 import com.totvs.taskmanager.exception.GlobalExceptionHandler;
 import com.totvs.taskmanager.exception.ResourceNotFoundException;
 import com.totvs.taskmanager.service.TaskService;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -27,8 +26,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = TaskController.class)
@@ -224,7 +222,78 @@ class TaskControllerTest {
                 .andExpect(status().isOk());
 
         verify(taskService).listTasks(isNull(), isNull(), any(Pageable.class));
+    }
 
+
+    @Test
+    void shouldReturn200WhenTaskStatusIsUpdated() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        UpdateTaskStatusRequest request = new UpdateTaskStatusRequest(TaskStatus.COMPLETED);
+
+        TaskResponse response = new TaskResponse(
+                taskId,
+                "Task 1",
+                "Task 1 description",
+                TaskStatus.COMPLETED,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null
+        );
+
+        when(taskService.updateTaskStatus(eq(taskId), any(UpdateTaskStatusRequest.class))).thenReturn(response);
+
+        mockMvc.perform(patch("/tarefas/{id}/status", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(taskService).updateTaskStatus(eq(taskId), any(UpdateTaskStatusRequest.class));
+    }
+
+    @Test
+    void shouldReturn400WhenStatusIsNull() throws Exception {
+        UUID taskId = UUID.randomUUID();
+        UpdateTaskStatusRequest request = new UpdateTaskStatusRequest(null);
+
+        mockMvc.perform(patch("/tarefas/{id}/status", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(taskService, never()).updateTaskStatus(any(), any());
+    }
+
+    @Test
+    void shouldReturn404WhenTaskDoesNotExist() throws Exception {
+        UUID taskId = UUID.randomUUID();
+        UpdateTaskStatusRequest request = new UpdateTaskStatusRequest(TaskStatus.COMPLETED);
+
+        when(taskService.updateTaskStatus(eq(taskId), any(UpdateTaskStatusRequest.class)))
+                .thenThrow(new ResourceNotFoundException("Task not found"));
+
+        mockMvc.perform(patch("/tarefas/{id}/status", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+
+        verify(taskService).updateTaskStatus(eq(taskId), any(UpdateTaskStatusRequest.class));
+    }
+
+    @Test
+    void shouldReturn409WhenTaskHasPendingSubtasks() throws Exception {
+        UUID taskId = UUID.randomUUID();
+        UpdateTaskStatusRequest request = new UpdateTaskStatusRequest(TaskStatus.COMPLETED);
+
+        when(taskService.updateTaskStatus(eq(taskId), any(UpdateTaskStatusRequest.class)))
+                .thenThrow(new BusinessRuleException("Cannot complete a task with pending subtasks."));
+
+        mockMvc.perform(patch("/tarefas/{id}/status", taskId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+
+        verify(taskService).updateTaskStatus(eq(taskId), any(UpdateTaskStatusRequest.class));
 
     }
 }
