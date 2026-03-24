@@ -83,7 +83,7 @@ public class SubtaskController {
                     content = @Content(schema = @Schema(implementation = StandardError.class)))
     })
     @GetMapping("/tarefas/{taskId}/subtarefas")
-    public ResponseEntity<Page<SubtaskResponse>> listTasks(
+    public ResponseEntity<Page<SubtaskResponse>> listSubtask(
             @Parameter(description = "Task identifier", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable UUID taskId,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable
