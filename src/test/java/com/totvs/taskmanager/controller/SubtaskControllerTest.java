@@ -2,31 +2,31 @@ package com.totvs.taskmanager.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.totvs.taskmanager.controller.dto.request.CreateSubTaskRequest;
-import com.totvs.taskmanager.controller.dto.request.CreateTaskRequest;
 import com.totvs.taskmanager.controller.dto.request.UpdateSubtaskRequest;
 import com.totvs.taskmanager.controller.dto.response.SubtaskResponse;
-import com.totvs.taskmanager.controller.dto.response.TaskResponse;
 import com.totvs.taskmanager.enums.TaskStatus;
 import com.totvs.taskmanager.exception.GlobalExceptionHandler;
 import com.totvs.taskmanager.exception.ResourceNotFoundException;
 import com.totvs.taskmanager.service.SubtaskService;
-import com.totvs.taskmanager.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -169,5 +169,73 @@ class SubtaskControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(subtaskService).updateSubtaskStatus(eq(subtaskId), any());
+    }
+
+    @Test
+    void shouldReturn200WhenListingSubtasksByTask() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        SubtaskResponse response = new SubtaskResponse(
+                UUID.randomUUID(),
+                "Subtask 1",
+                "Subtask 1 description",
+                TaskStatus.PENDING,
+                LocalDateTime.now(),
+                null,
+                taskId
+        );
+
+        Page<SubtaskResponse> page = new PageImpl<>(List.of(response));
+
+        when(subtaskService.listSubtasksByTask(eq(taskId), any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/tarefas/{taskId}/subtarefas", taskId))
+                .andExpect(status().isOk());
+
+        verify(subtaskService).listSubtasksByTask(eq(taskId), any(Pageable.class));
+    }
+
+    @Test
+    void shouldReturn200WhenListingSubtasksWithPagination() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        SubtaskResponse response = new SubtaskResponse(
+                UUID.randomUUID(),
+                "Subtask 1",
+                "Subtask 1 description",
+                TaskStatus.PENDING,
+                LocalDateTime.now(),
+                null,
+                taskId
+        );
+
+        Page<SubtaskResponse> page = new PageImpl<>(List.of(response));
+
+        when(subtaskService.listSubtasksByTask(eq(taskId), any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/tarefas/{taskId}/subtarefas", taskId)
+                        .param("page", "0")
+                        .param("size", "5")
+                        .param("sort", "createdAt,asc")
+                )
+                .andExpect(status().isOk());
+
+
+        verify(subtaskService).listSubtasksByTask(eq(taskId), any(Pageable.class));
+    }
+
+    @Test
+    void shouldReturn404WhenTaskDoesNotExistWhenListingSubtasks() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        when(subtaskService.listSubtasksByTask(eq(taskId), any(Pageable.class)))
+                .thenThrow(new ResourceNotFoundException("Task not found"));
+
+        mockMvc.perform(get("/tarefas/{taskId}/subtarefas", taskId))
+                .andExpect(status().isNotFound());
+
+        verify(subtaskService).listSubtasksByTask(eq(taskId), any(Pageable.class));
     }
 }
