@@ -62,4 +62,19 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(status).body(error);
     }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<StandardError> handleBusinessRuleException(BusinessRuleException ex, HttpServletRequest request){
+        HttpStatus status = HttpStatus.CONFLICT;
+
+        StandardError error = new StandardError(
+                LocalDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(error);
+    }
 }
