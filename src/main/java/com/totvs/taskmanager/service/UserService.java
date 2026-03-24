@@ -7,6 +7,7 @@ import com.totvs.taskmanager.exception.EmailAlreadyExistsException;
 import com.totvs.taskmanager.exception.ResourceNotFoundException;
 import com.totvs.taskmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +24,20 @@ public class UserService {
             throw new EmailAlreadyExistsException("Email already exists");
         }
 
-        UserEntity userEntity = request.toEntity();
-        UserEntity savedUser = userRepository.save(userEntity);
+        try {
+            UserEntity userEntity = request.toEntity();
+            UserEntity savedUser = userRepository.save(userEntity);
 
-        return UserResponse.fromEntity(savedUser);
+            return UserResponse.fromEntity(savedUser);
+        } catch (DataIntegrityViolationException ex) {
+            throw new EmailAlreadyExistsException("Email already exists");
+        }
+
     }
 
     public UserResponse getUserById(UUID id) {
-        UserEntity userEntity = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        UserEntity userEntity = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return UserResponse.fromEntity(userEntity);
     }
 }

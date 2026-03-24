@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -30,7 +31,7 @@ class UserServiceTest {
 
     @Test
     @DisplayName("Should create user successfully")
-    void shouldCreateUserSuccessfully(){
+    void shouldCreateUserSuccessfully() {
         // Arrange
         CreateUserRequest request = new CreateUserRequest("Raul", "raul@email.com");
         UserEntity savedUserEntity = UserEntity.builder()
@@ -57,7 +58,7 @@ class UserServiceTest {
 
     @Test
     @DisplayName("Should throw EmailAlreadyExistsException when email already exists and not create a user")
-    void shouldThrowExceptionWhenEmailAlreadyExists(){
+    void shouldThrowExceptionWhenEmailAlreadyExists() {
         // Arrange
         CreateUserRequest request = new CreateUserRequest("Raul", "raul@email.com");
         when(userRepository.existsByEmail(request.email())).thenReturn(true);
@@ -74,7 +75,7 @@ class UserServiceTest {
 
     @Test
     @DisplayName("Should return a user when ID exists")
-    void shouldReturnUserWhenIdExists(){
+    void shouldReturnUserWhenIdExists() {
         // Arrange
         UUID userId = UUID.randomUUID();
         UserEntity existingEntity = UserEntity.builder()
@@ -97,7 +98,7 @@ class UserServiceTest {
 
     @Test
     @DisplayName("Should throw ResourceNotFoundException when user does not exist")
-    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist(){
+    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist() {
         UUID userId = UUID.randomUUID();
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
@@ -107,6 +108,24 @@ class UserServiceTest {
 
         assertEquals("User not found", exception.getMessage());
         verify(userRepository).findById(userId);
+    }
+
+    @Test
+    @DisplayName("Should throw EmailAlreadyExistsException when save violates unique constraint")
+    void shouldThrowEmailAlreadyExistsExceptionWhenSaveViolatesUniqueEmail() {
+        CreateUserRequest request = new CreateUserRequest("Raul", "raul@email.com");
+
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.save(any(UserEntity.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        EmailAlreadyExistsException exception = assertThrows(
+                EmailAlreadyExistsException.class, () -> userService.createUser(request)
+        );
+
+        assertEquals("Email already exists", exception.getMessage());
+        verify(userRepository).existsByEmail(request.email());
+        verify(userRepository).save(any(UserEntity.class));
     }
 
 }
