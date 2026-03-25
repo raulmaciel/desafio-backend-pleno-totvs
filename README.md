@@ -49,7 +49,7 @@ O JPA opera com `ddl-auto: validate`, ou seja, nunca altera o schema — o Flywa
 
 ### 📄 Documentação OpenAPI / Swagger
 
-Todos os endpoints são documentados com anotações `@Operation`, `@ApiResponse` e `@Schema` do Springdoc OpenAPI. A Swagger UI fica disponível em `http://localhost:8080/swagger-ui.html` após subir a aplicação.
+Todos os endpoints são documentados com anotações `@Operation`, `@ApiResponse` e `@Schema` do Springdoc OpenAPI. A Swagger UI fica disponível em `http://localhost:8080/swagger-ui/index.html` após subir a aplicação.
 
 ---
 
@@ -85,7 +85,7 @@ O relacionamento `@ManyToOne` nas entidades usa `FetchType.LAZY` para evitar con
 ## ⚠️ Regras de Negócio
 
 - `concludedAt` é preenchido **automaticamente** apenas quando o status é definido como `COMPLETED`, e limpo nos demais casos
-- Uma tarefa **só pode ser concluída** se **todas as suas subtarefas** estiverem com status `COMPLETED` — validado via `SubtaskRepository.existsByTaskIdAndStatusNot()`
+- Uma tarefa **só pode ser concluída** se **todas as suas subtarefas** estiverem com status `COMPLETED` — validado via consulta ao repositório que verifica subtarefas pendentes.
 - Alterar o status de uma subtarefa **não afeta automaticamente** a tarefa pai, mas pode bloquear sua conclusão enquanto houver subtarefas pendentes
 - O status inicial de tarefas e subtarefas é definido como `PENDING` via `@PrePersist`
 
@@ -137,29 +137,53 @@ O projeto conta com três camadas de testes, cobrindo desde a lógica de negóci
 ### Pré-requisitos
 
 - [Docker](https://www.docker.com/) e Docker Compose
+- [Java 21](https://adoptium.net/temurin/releases/?version=21) (Apenas para execução local sem Docker)
 
-### Subindo a aplicação
+### Rodando localmente (dev)
+
+Para rodar localmente, certifique-se de que o PostgreSQL está disponível em sua máquina ou via Docker, utilizando as mesmas variáveis de ambiente definidas no `application.yml`. Execute o comando abaixo:
 
 ```bash
-# Primeira vez — faz o build e sobe tudo
-docker-compose up --build
+# Linux / macOS
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# Ou
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
-# Nas próximas vezes
-docker-compose up
+# Windows
+mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-O Flyway cria as tabelas automaticamente na primeira execução. Com a aplicação no ar, acesse a documentação interativa para explorar e testar todos os endpoints:
+### Rodando com Docker (prod)
 
-- **Swagger UI:** `http://localhost:8080/swagger-ui.html`
-- **Health Check:** `http://localhost:8080/actuator/health`
+O profile `prod` será utilizado por padrão via `docker-compose.yml`.
+
+```bash
+# Primeira vez — faz o build e start
+docker compose up --build
+
+# Depois
+docker compose up
+```
+
+O Flyway cria as tabelas automaticamente na primeira execução. Com a aplicação no ar, acesse a documentação interativa e endpoints de gerenciamento:
+
+- **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
+- **Actuator Health:** `http://localhost:8080/actuator/health`
+- **Actuator Readiness:** `http://localhost:8080/actuator/health/readiness`
+- **Actuator Info:** `http://localhost:8080/actuator/info`
 
 ---
 
-## 🏃 Executando os Testes
+## 🏃 Executando os testes (test)
+
+A execução dos testes requer o Docker ativo (o Testcontainers sobe o banco de dados efêmero automaticamente).
 
 ```bash
-# Requer Docker em execução (Testcontainers sobe o banco automaticamente)
-./mvnw test
+# Linux / macOS
+SPRING_PROFILES_ACTIVE=test ./mvnw test
+
+# Windows
+set SPRING_PROFILES_ACTIVE=test && mvnw.cmd test
 ```
 
 ---
