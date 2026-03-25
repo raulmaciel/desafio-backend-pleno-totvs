@@ -15,7 +15,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: true
 
 management:
   endpoints:
@@ -24,7 +23,8 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: always
+      probes:
+        enabled: true
   info:
     env:
       enabled: true
@@ -32,5 +32,5 @@ management:
 info:
   app:
     name: taskmanager
-    description: Task management API for TOTVS backend challenge
+    description: Task management API for the TOTVS backend challenge
     version: 1.0.0
